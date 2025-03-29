@@ -54,3 +54,6 @@ void action_install_url(const char* confirmMessage, const char* urls, const char
                         void (*finishedURL)(void* data, u32 index),
                         void (*finishedAll)(void* data),
                         void (*drawTop)(ui_view* view, void* data, float x1, float y1, float x2, float y2, u32 index));
+
+void action_install_cia_by_path(const char* path);
+void install_from_sc_done(void *data);
