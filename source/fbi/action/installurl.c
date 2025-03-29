@@ -253,19 +253,6 @@ static bool action_install_url_error(void* data, u32 index, Result res, ui_view*
     return true;
 }
 
-extern u64 title_id;
-extern int cancel_install;
-
-static void sc_install_done_callback(ui_view* view, void* data, u32 response) {
-    Result res = 0;
-    if(R_SUCCEEDED(res = APT_PrepareToDoApplicationJump(0, title_id, 1))) {
-        u8 param[0x300];
-        u8 hmac[0x20];
-
-        APT_DoApplicationJump(param, sizeof(param), hmac);
-    }
-}
-
 static void action_install_url_install_update(ui_view* view, void* data, float* progress, char* text) {
     install_url_data* installData = (install_url_data*) data;
 
@@ -274,11 +261,7 @@ static void action_install_url_install_update(ui_view* view, void* data, float* 
         info_destroy(view);
 
         if(R_SUCCEEDED(installData->installInfo.result)) {
-            if (title_id != 0) {
-              prompt_display_notify("Success", "Install finished.", COLOR_TEXT, NULL, NULL, sc_install_done_callback);
-            } else {
-              prompt_display_notify("Success", "Install finished.", COLOR_TEXT, NULL, NULL, NULL);
-            }
+            prompt_display_notify("Success", "Install finished.", COLOR_TEXT, NULL, NULL, NULL);
         }
 
         action_install_url_free_data(installData);
@@ -287,7 +270,6 @@ static void action_install_url_install_update(ui_view* view, void* data, float* 
     }
 
     if(hidKeysDown() & KEY_B) {
-        cancel_install = 1;
         svcSignalEvent(installData->installInfo.cancelEvent);
     }
 
@@ -315,7 +297,6 @@ static void action_install_url_confirm_onresponse(ui_view* view, void* data, u32
             action_install_url_free_data(installData);
         }
     } else {
-        cancel_install = 1;
         action_install_url_free_data(installData);
     }
 }

@@ -176,28 +176,10 @@ void cleanup() {
 }
 
 int exit_code = 0;
-int use_curl_instead = 0;
-int cancel_install = 0;
+int is_sc_called = 0;
+int is_local_cia = 0;
 u64 title_id = 0;
-
-void install_from_remote_done(void* data) {
-  if (envIsHomebrew()) {
-    char *from_3dsx_path = (char *)data;
-    if(from_3dsx_path != NULL) {
-      loader_launch_file(from_3dsx_path, NULL);
-      exit_code = 1;
-    }
-  }  else if (title_id != 0 && cancel_install) {
-    Result res = 0;
-
-    if(R_SUCCEEDED(res = APT_PrepareToDoApplicationJump(0, title_id, 1))) {
-        u8 param[0x300];
-        u8 hmac[0x20];
-
-        APT_DoApplicationJump(param, sizeof(param), hmac);
-    }
-  }
-}
+char *sc_3dsx_path = NULL;
 
 static bool remoteinstall_get_urls_by_path(const char* path, char* out, size_t size) {
     if(out == NULL || size == 0) {
@@ -230,17 +212,23 @@ int main(int argc, const char* argv[]) {
     // Install from URL if a URL was passed as an argument.
     if (envIsHomebrew()) {
       if(argc > 2) {
-        use_curl_instead = 1;
+        is_sc_called = 1;
         char* url = (char*) calloc(1, DOWNLOAD_URL_MAX * INSTALL_URLS_MAX);
         remoteinstall_get_urls_by_path(argv[1], url, DOWNLOAD_URL_MAX * INSTALL_URLS_MAX);
-        action_install_url("Install From URL?",
+        sc_3dsx_path = (char *)argv[2];
+        if (strncmp(url, "/", 1) == 0) {
+          is_local_cia = 1;
+          action_install_cia_by_path(url);
+        } else {
+          action_install_url("Install From URL?",
             url,
             fs_get_3dsx_path(),
-            (void *)argv[2],
             NULL,
-            install_from_remote_done,
+            NULL,
+            install_from_sc_done,
             NULL
-        );
+         );
+        }
         free(url);
       }
     } else {
@@ -259,18 +247,24 @@ int main(int argc, const char* argv[]) {
         if (len > 0) {
           char *params_str = (char *)param;
           if (strncmp(params_str, "sc:", 3) == 0) {
-            use_curl_instead = 1;
+            is_sc_called = 1;
             char *path = params_str + 3;
             char* url = (char*) calloc(1, DOWNLOAD_URL_MAX * INSTALL_URLS_MAX);
             remoteinstall_get_urls_by_path(path, url, DOWNLOAD_URL_MAX * INSTALL_URLS_MAX);
-            action_install_url("Install From URL?",
+            // file path
+            if (strncmp(url, "/", 1) == 0) {
+              is_local_cia = 1;
+              action_install_cia_by_path(url);
+            } else {
+              action_install_url("Install From URL?",
                 url,
                 fs_get_3dsx_path(),
                 NULL,
                 NULL,
-                install_from_remote_done,
+                install_from_sc_done,
                 NULL
-            );
+              );
+            }
             free(url);
           }
         }

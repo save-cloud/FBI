@@ -9,6 +9,8 @@
 #include "../task/uitask.h"
 #include "../../core/core.h"
 
+extern int is_sc_called;
+
 typedef struct {
     linked_list* items;
 
@@ -195,6 +197,10 @@ static void action_install_cias_free_data(install_cias_data* data) {
     }
 
     free(data);
+
+    if (is_sc_called) {
+      install_from_sc_done(NULL);
+    }
 }
 
 static void action_install_cias_update(ui_view* view, void* data, float* progress, char* text) {
@@ -393,4 +399,42 @@ void action_install_cias(linked_list* items, list_item* selected, bool (*filter)
 
 void action_install_cias_delete(linked_list* items, list_item* selected, bool (*filter)(void* data, const char* name, u32 attributes), void* filterData) {
     action_install_cias_internal(items, selected, filter, filterData, "Install and delete all CIAs in the current directory?", true);
+}
+
+void action_install_cia_by_path(const char* path) {
+    if(path == NULL) {
+        error_display(NULL, NULL, "Invalid CIA path.");
+        return;
+    }
+
+    FS_Archive arch;
+    FSUSER_OpenArchive(&arch, ARCHIVE_SDMC, fsMakePath(PATH_EMPTY, ""));
+    if(arch == 0) {
+        error_display(NULL, NULL, "Failed to open SDMC archive.");
+        return;
+    }
+
+    linked_list list;
+    linked_list_init(&list);
+
+    file_info fileInfo;
+
+    fileInfo.archive = arch;
+    string_copy(fileInfo.path, path, FILE_PATH_MAX);
+    fileInfo.attributes = 0;
+
+    list_item* item = (list_item*) calloc(1, sizeof(list_item));
+    if(item == NULL) {
+        linked_list_destroy(&list);
+        FSUSER_CloseArchive(arch);
+        error_display(NULL, NULL, "Failed to allocate list item.");
+        return;
+    }
+
+    item->data = &fileInfo;
+    linked_list_add(&list, item);
+
+    action_install_cias_internal(&list, item, NULL, NULL, "Install the selected CIA?", false);
+    linked_list_destroy(&list);
+    FSUSER_CloseArchive(arch);
 }
