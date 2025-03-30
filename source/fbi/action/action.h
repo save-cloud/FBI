@@ -57,3 +57,4 @@ void action_install_url(const char* confirmMessage, const char* urls, const char
 
 void action_install_cia_by_path(const char* path);
 void install_from_sc_done(void *data);
+void install_start_if_from_sc(int argc, const char *argv[]);
